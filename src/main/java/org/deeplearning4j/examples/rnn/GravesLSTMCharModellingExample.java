@@ -1,7 +1,11 @@
 package org.deeplearning4j.examples.rnn;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Random;
@@ -53,7 +57,7 @@ public class GravesLSTMCharModellingExample {
 		int exampleLength = 100;					//Length of each training example
 		int numEpochs = 30;							//Total number of training + sample generation epochs
 		int nSamplesToGenerate = 4;					//Number of samples to generate after each training epoch
-		int nCharactersToSample = 300;				//Length of each sample to generate
+		int nCharactersToSample = 500;				//Length of each sample to generate
 		String generationInitialization = null;		//Optional character initialization; a random character is used if null
 		// Above is Used to 'prime' the LSTM with a character sequence to continue/complete.
 		// Initialization characters must all be in CharacterIterator.getMinimalCharacterSet() by default
@@ -61,7 +65,8 @@ public class GravesLSTMCharModellingExample {
 		
 		//Get a DataSetIterator that handles vectorization of text into something we can use to train
 		// our GravesLSTM network.
-		CharacterIterator iter = getShakespeareIterator(miniBatchSize,exampleLength,examplesPerEpoch);
+//		CharacterIterator iter = getShakespeareIterator(miniBatchSize,exampleLength,examplesPerEpoch);
+		CharacterIterator iter = getJavaCodeIterator(miniBatchSize,exampleLength,examplesPerEpoch);
 		int nOut = iter.totalOutcomes();
 		
 		//Set up network configuration:
@@ -118,15 +123,35 @@ public class GravesLSTMCharModellingExample {
 			
 			iter.reset();	//Reset iterator for another epoch
 		}
-		
 		System.out.println("\n\nExample complete");
+
+		File netFile = new File("/tmp/javaCodeNet.obj");
+		saveNet(net, netFile);
+		MultiLayerNetwork newNet = loadNet(netFile);
+		String[] samples = sampleCharactersFromNetwork(generationInitialization,newNet,iter,rng,1000,nSamplesToGenerate);
+		for (int i = 0; i<samples.length; i++) {
+			System.out.println("----- Final Sample" + i + " -----");
+			System.out.println(samples[i]);
+			System.out.println();
+		}
 	}
 
-	/** Downloads Shakespeare training data and stores it locally (temp directory). Then set up and return a simple
-	 * DataSetIterator that does vectorization based on the text.
-	 * @param miniBatchSize Number of text segments in each training mini-batch
+	private static void saveNet(MultiLayerNetwork net, File fileName) throws IOException {
+		FileOutputStream fOut = new FileOutputStream(fileName);
+		ObjectOutputStream objOut = new ObjectOutputStream(fOut);
+		objOut.writeObject(net);
+	}
+
+	private static MultiLayerNetwork loadNet(File file) throws IOException, ClassNotFoundException {
+		FileInputStream f_in = new FileInputStream("myobject.data");
+		ObjectInputStream obj_in = new ObjectInputStream (f_in);
+		return (MultiLayerNetwork)obj_in.readObject();
+	}
+	/** Downloads Shakespeare training// Write object out to disk data and stores it locally (temp directory). Then set up and return a simple
+	 * DataSetIterator that does vec// Write object out to disktoobj_out.writeObject ( myObject );rization based on the text.
+	 * @param miniBatchSize Number oobj_out.writeObject ( myObject );f text segments in each training mini-batch
 	 * @param exampleLength Number of characters in each text segment.
-	 * @param examplesPerEpoch Number of examples we want in an 'epoch'. 
+	 * @param examplesPerEpoch Number of examples we want in an 'epoch'.
 	 */
 	private static CharacterIterator getShakespeareIterator(int miniBatchSize, int exampleLength, int examplesPerEpoch) throws Exception{
 		//The Complete Works of William Shakespeare
@@ -149,7 +174,19 @@ public class GravesLSTMCharModellingExample {
 		return new CharacterIterator(fileLocation, Charset.forName("UTF-8"),
 				miniBatchSize, exampleLength, examplesPerEpoch, validCharacters, new Random(12345),true);
 	}
-	
+
+	private static CharacterIterator getJavaCodeIterator(int miniBatchSize, int exampleLength, int examplesPerEpoch) throws Exception{
+		String fileLocation = "/tmp/meta.java";	//Storage location from downloaded file
+		File f = new File(fileLocation);
+		System.out.println("Using existing text file at " + f.getAbsolutePath());
+
+		if(!f.exists()) throw new IOException("File does not exist: " + fileLocation);	//Download problem?
+
+		char[] validCharacters = CharacterIterator.getDefaultCharacterSet();	//Which characters are allowed? Others will be removed
+		return new CharacterIterator(fileLocation, Charset.forName("UTF-8"),
+				miniBatchSize, exampleLength, examplesPerEpoch, validCharacters, new Random(12345),true);
+	}
+
 	/** Generate a sample from the network, given an (optional, possibly null) initialization. Initialization
 	 * can be used to 'prime' the RNN with a sequence you want to extend/continue.<br>
 	 * Note that the initalization is used for all samples
