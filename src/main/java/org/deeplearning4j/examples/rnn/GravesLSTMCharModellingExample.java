@@ -54,8 +54,8 @@ public class GravesLSTMCharModellingExample {
 		int lstmLayerSize = 200;					//Number of units in each GravesLSTM layer
 		int miniBatchSize = 32;						//Size of mini batch to use when  training
 		int examplesPerEpoch = 50 * miniBatchSize;	//i.e., how many examples to learn on between generating samples
-		int exampleLength = 100;					//Length of each training example
-		int numEpochs = 30;							//Total number of training + sample generation epochs
+		int exampleLength = 120;					//Length of each training example
+		int numEpochs = 100;							//Total number of training + sample generation epochs
 		int nSamplesToGenerate = 4;					//Number of samples to generate after each training epoch
 		int nCharactersToSample = 500;				//Length of each sample to generate
 		String generationInitialization = null;		//Optional character initialization; a random character is used if null
@@ -140,12 +140,17 @@ public class GravesLSTMCharModellingExample {
 		FileOutputStream fOut = new FileOutputStream(fileName);
 		ObjectOutputStream objOut = new ObjectOutputStream(fOut);
 		objOut.writeObject(net);
+		objOut.close();
+		fOut.close();
 	}
 
 	private static MultiLayerNetwork loadNet(File file) throws IOException, ClassNotFoundException {
-		FileInputStream f_in = new FileInputStream("myobject.data");
-		ObjectInputStream obj_in = new ObjectInputStream (f_in);
-		return (MultiLayerNetwork)obj_in.readObject();
+		FileInputStream fIn = new FileInputStream(file);
+		ObjectInputStream objIn = new ObjectInputStream (fIn);
+		MultiLayerNetwork network = (MultiLayerNetwork)objIn.readObject();
+		objIn.close();
+		fIn.close();
+		return network;
 	}
 	/** Downloads Shakespeare training// Write object out to disk data and stores it locally (temp directory). Then set up and return a simple
 	 * DataSetIterator that does vec// Write object out to disktoobj_out.writeObject ( myObject );rization based on the text.
