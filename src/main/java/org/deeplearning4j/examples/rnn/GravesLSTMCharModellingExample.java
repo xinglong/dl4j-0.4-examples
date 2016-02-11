@@ -51,11 +51,15 @@ import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
  */
 public class GravesLSTMCharModellingExample {
 	public static void main( String[] args ) throws Exception {
-		int lstmLayerSize = 200;					//Number of units in each GravesLSTM layer
-		int miniBatchSize = 32;						//Size of mini batch to use when  training
+
+		File inputFile = new File(args[0]);
+		File modelFile = new File(args[1]);
+
+		int lstmLayerSize = 300;					//Number of units in each GravesLSTM layer
+		int miniBatchSize = 64;						//Size of mini batch to use when  training
 		int examplesPerEpoch = 50 * miniBatchSize;	//i.e., how many examples to learn on between generating samples
-		int exampleLength = 120;					//Length of each training example
-		int numEpochs = 100;							//Total number of training + sample generation epochs
+		int exampleLength = 500;					//Length of each training example
+		int numEpochs = 200;							//Total number of training + sample generation epochs
 		int nSamplesToGenerate = 4;					//Number of samples to generate after each training epoch
 		int nCharactersToSample = 500;				//Length of each sample to generate
 		String generationInitialization = null;		//Optional character initialization; a random character is used if null
@@ -66,7 +70,7 @@ public class GravesLSTMCharModellingExample {
 		//Get a DataSetIterator that handles vectorization of text into something we can use to train
 		// our GravesLSTM network.
 //		CharacterIterator iter = getShakespeareIterator(miniBatchSize,exampleLength,examplesPerEpoch);
-		CharacterIterator iter = getJavaCodeIterator(miniBatchSize,exampleLength,examplesPerEpoch);
+		CharacterIterator iter = getJavaCodeIterator(inputFile,miniBatchSize,exampleLength,examplesPerEpoch);
 		int nOut = iter.totalOutcomes();
 		
 		//Set up network configuration:
@@ -125,9 +129,8 @@ public class GravesLSTMCharModellingExample {
 		}
 		System.out.println("\n\nExample complete");
 
-		File netFile = new File("/tmp/javaCodeNet.obj");
-		saveNet(net, netFile);
-		MultiLayerNetwork newNet = loadNet(netFile);
+		saveNet(net, modelFile);
+		MultiLayerNetwork newNet = loadNet(modelFile);
 		String[] samples = sampleCharactersFromNetwork(generationInitialization,newNet,iter,rng,1000,nSamplesToGenerate);
 		for (int i = 0; i<samples.length; i++) {
 			System.out.println("----- Final Sample" + i + " -----");
@@ -180,15 +183,13 @@ public class GravesLSTMCharModellingExample {
 				miniBatchSize, exampleLength, examplesPerEpoch, validCharacters, new Random(12345),true);
 	}
 
-	private static CharacterIterator getJavaCodeIterator(int miniBatchSize, int exampleLength, int examplesPerEpoch) throws Exception{
-		String fileLocation = "/tmp/meta.java";	//Storage location from downloaded file
-		File f = new File(fileLocation);
-		System.out.println("Using existing text file at " + f.getAbsolutePath());
+	private static CharacterIterator getJavaCodeIterator(File inputFile, int miniBatchSize, int exampleLength, int examplesPerEpoch) throws Exception{
+		System.out.println("Using existing text file at " + inputFile.getAbsolutePath());
 
-		if(!f.exists()) throw new IOException("File does not exist: " + fileLocation);	//Download problem?
+		if(!inputFile.exists()) throw new IOException("File does not exist: " + inputFile.getAbsolutePath());	//Download problem?
 
 		char[] validCharacters = CharacterIterator.getDefaultCharacterSet();	//Which characters are allowed? Others will be removed
-		return new CharacterIterator(fileLocation, Charset.forName("UTF-8"),
+		return new CharacterIterator(inputFile.getAbsolutePath(), Charset.forName("UTF-8"),
 				miniBatchSize, exampleLength, examplesPerEpoch, validCharacters, new Random(12345),true);
 	}
 
